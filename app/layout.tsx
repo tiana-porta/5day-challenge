@@ -5,7 +5,7 @@ import "./globals.css";
 
 // Ensure App ID is available - set as fallback if env var doesn't load
 if (typeof process !== 'undefined' && !process.env.NEXT_PUBLIC_WHOP_APP_ID) {
-  process.env.NEXT_PUBLIC_WHOP_APP_ID = 'app_AVNFP7BwO95Bf8'
+  process.env.NEXT_PUBLIC_WHOP_APP_ID = 'app_ajqOG7d0vm2Ql2'
 }
 
 // FFF-AcidGrotesk font configuration

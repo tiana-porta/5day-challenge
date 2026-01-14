@@ -58,6 +58,7 @@ Open [http://localhost:3000](http://localhost:3000) with your browser.
 ### Environment Variables Required
 
 - `NEXT_PUBLIC_WHOP_APP_ID` - Your Whop App ID (required for Whop app integration)
+- `WHOP_API_KEY` - Your Whop API Key (optional, for server-side operations if needed)
 
 ## Project Structure
 
