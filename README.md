@@ -1,36 +1,79 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# 5 Day Challenge - Whop App
+
+A countdown timer and RSVP tracking app for the Whop University 5-day challenge.
+
+## Features
+
+- ⏱️ **Countdown Timer** - Real-time countdown to January 26, 2026 at 4:00 PM EST
+- 📝 **RSVP Tracking** - Track total RSVPs with localStorage persistence
+- 🎨 **Beautiful UI** - Dark theme with orange accents, glassmorphism effects, and smooth animations
+- 🔤 **Custom Font** - FFF-AcidGrotesk font family
+- 🚀 **Whop App** - Integrated with Whop platform
+
+## Tech Stack
+
+- Next.js 16
+- React 19
+- TypeScript
+- Tailwind CSS v4
+- Framer Motion
+- @whop/react
 
 ## Getting Started
 
-First, run the development server:
+### Prerequisites
+
+- Node.js 18+ and npm
+- A Whop App ID
+
+### Installation
+
+```bash
+# Install dependencies
+npm install
+
+# Copy environment variables
+cp .env.local.example .env.local
+
+# Edit .env.local with your Whop App ID
+NEXT_PUBLIC_WHOP_APP_ID=your-app-id-here
+```
+
+### Run Development Server
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open [http://localhost:3000](http://localhost:3000) with your browser.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Deployment to Vercel
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+1. Push this repository to GitHub
+2. Import the project in Vercel
+3. Add environment variables:
+   - `NEXT_PUBLIC_WHOP_APP_ID` - Your Whop App ID (get it from https://whop.com/apps)
+4. Deploy!
 
-## Learn More
+### Environment Variables Required
 
-To learn more about Next.js, take a look at the following resources:
+- `NEXT_PUBLIC_WHOP_APP_ID` - Your Whop App ID (required for Whop app integration)
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Project Structure
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+```
+5day-challenge/
+├── app/
+│   ├── layout.tsx          # Root layout with Whop wrapper
+│   ├── page.tsx            # Main challenge page
+│   └── whop-app-wrapper.tsx # Whop app wrapper component
+├── components/
+│   ├── CountdownTimer.tsx  # Countdown timer component
+│   └── RSVPButton.tsx      # RSVP button with counter
+└── public/
+    └── fonts/              # FFF-AcidGrotesk font files
+```
 
-## Deploy on Vercel
+## License
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+MIT
