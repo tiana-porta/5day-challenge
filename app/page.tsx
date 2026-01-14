@@ -1,5 +1,8 @@
 'use client'
 
+// Mark as dynamic to avoid static generation issues with WhopApp
+export const dynamic = 'force-dynamic'
+
 import { motion } from 'framer-motion'
 import { CountdownTimer } from '@/components/CountdownTimer'
 import { RSVPButton } from '@/components/RSVPButton'
