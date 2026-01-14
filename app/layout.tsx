@@ -120,10 +120,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className={`${acidGrotesk.variable} dark`} suppressHydrationWarning>
-      <body
-        className="antialiased bg-dark text-primary"
-      >
+    <html lang="en" className={acidGrotesk.variable} suppressHydrationWarning>
+      <body>
         <WhopAppWrapper>{children}</WhopAppWrapper>
       </body>
     </html>
