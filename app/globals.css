@@ -21,22 +21,12 @@
 @layer base {
   body {
     @apply bg-dark text-primary;
-    font-family: var(--font-acid-grotesk), -apple-system, BlinkSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+    font-family: var(--font-acid-grotesk), -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
       'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
       sans-serif;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
   }
-}
-
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: var(--font-acid-grotesk), -apple-system, BlinkSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
-    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
-    sans-serif;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
 }
 
 * {
