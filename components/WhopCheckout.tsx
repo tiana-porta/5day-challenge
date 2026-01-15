@@ -86,6 +86,7 @@ export function WhopCheckout({
 
   useEffect(() => {
     let mounted = true;
+    let messageHandler: ((event: MessageEvent) => void) | null = null;
 
     const initializeCheckout = async () => {
       try {
@@ -94,36 +95,48 @@ export function WhopCheckout({
 
         if (!mounted) return;
 
-        // Wait a bit for the DOM element to be ready
-        await new Promise(resolve => setTimeout(resolve, 100));
+        // Wait for DOM element to be ready
+        await new Promise(resolve => setTimeout(resolve, 200));
 
-        // Scan for checkout embeds
+        if (!mounted || !containerRef.current) return;
+
+        // Clear any existing content
+        if (containerRef.current) {
+          containerRef.current.innerHTML = '';
+          // Re-add the data attributes
+          containerRef.current.className = 'whop-checkout-embed';
+          containerRef.current.setAttribute('data-whop-checkout-plan-id', planId);
+          containerRef.current.setAttribute('data-whop-checkout-theme', theme);
+          containerRef.current.setAttribute('data-whop-checkout-theme-accent-color', accentColor);
+        }
+
+        // Scan for checkout embeds - call multiple times to ensure it picks up
         if (window.whopCheckoutLoader?.scan) {
+          // Call scan immediately
           window.whopCheckoutLoader.scan();
           hasScannedRef.current = true;
           
+          // Call scan again after a short delay to ensure it catches the element
+          setTimeout(() => {
+            if (mounted && window.whopCheckoutLoader?.scan) {
+              window.whopCheckoutLoader.scan();
+            }
+          }, 300);
+          
           // Listen for checkout completion events
-          if (onComplete && containerRef.current) {
-            // Whop checkout emits events on the container
-            const handleComplete = () => {
-              onComplete();
-            };
-            
-            // Listen for messages from Whop checkout iframe
-            const messageHandler = (event: MessageEvent) => {
+          if (onComplete) {
+            messageHandler = (event: MessageEvent) => {
               // Check if message is from Whop checkout
               if (event.data && typeof event.data === 'object') {
-                if (event.data.type === 'whop-checkout-complete' || event.data.event === 'checkout.completed') {
-                  handleComplete();
+                if (event.data.type === 'whop-checkout-complete' || 
+                    event.data.event === 'checkout.completed' ||
+                    event.data.whopCheckoutComplete) {
+                  onComplete();
                 }
               }
             };
             
             window.addEventListener('message', messageHandler);
-            
-            return () => {
-              window.removeEventListener('message', messageHandler);
-            };
           }
         }
       } catch (error) {
@@ -133,17 +146,25 @@ export function WhopCheckout({
 
     initializeCheckout();
 
-    // Re-scan if loader becomes available later
+    // Re-scan if loader becomes available later or if element wasn't found
     const retryInterval = setInterval(() => {
-      if (mounted && containerRef.current && window.whopCheckoutLoader?.scan && !hasScannedRef.current) {
-        window.whopCheckoutLoader.scan();
-        hasScannedRef.current = true;
+      if (mounted && containerRef.current && window.whopCheckoutLoader?.scan) {
+        // Check if checkout has rendered (has children or iframe)
+        const hasContent = containerRef.current.children.length > 0 || 
+                          containerRef.current.querySelector('iframe');
+        
+        if (!hasContent) {
+          window.whopCheckoutLoader.scan();
+        }
       }
     }, 500);
 
     return () => {
       mounted = false;
       clearInterval(retryInterval);
+      if (messageHandler) {
+        window.removeEventListener('message', messageHandler);
+      }
       hasScannedRef.current = false; // Reset so it can scan again when remounted
     };
   }, [planId, theme, accentColor, onComplete]);

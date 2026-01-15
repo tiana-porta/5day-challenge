@@ -36,6 +36,7 @@ export function RSVPButton() {
   const [justRSVPed, setJustRSVPed] = useState(false)
   const [showModal, setShowModal] = useState(false)
   const [loading, setLoading] = useState(true)
+  const [checkoutKey, setCheckoutKey] = useState(0)
 
   useEffect(() => {
     // Fetch initial count from API
@@ -58,6 +59,8 @@ export function RSVPButton() {
   const handleRSVP = () => {
     // Just open the modal - don't increment count yet
     // Count will increment when checkout is completed
+    // Force remount of checkout by changing key
+    setCheckoutKey(prev => prev + 1)
     setShowModal(true)
   }
   
@@ -185,8 +188,9 @@ export function RSVPButton() {
                 </div>
 
                 {/* Whop Checkout Embed */}
-                <div className="mt-6" key={showModal ? 'checkout-open' : 'checkout-closed'}>
+                <div className="mt-6">
                   <WhopCheckout 
+                    key={checkoutKey}
                     planId="plan_6qlhHFelOu6cx"
                     theme="system"
                     accentColor="orange"
