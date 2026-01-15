@@ -4,6 +4,7 @@ interface WhopCheckoutProps {
   planId?: string;
   theme?: 'light' | 'dark' | 'system';
   accentColor?: string;
+  onComplete?: () => void;
 }
 
 declare global {
@@ -77,7 +78,8 @@ function loadWhopCheckoutScript(): Promise<void> {
 export function WhopCheckout({ 
   planId = 'plan_6qlhHFelOu6cx',
   theme = 'system',
-  accentColor = 'orange'
+  accentColor = 'orange',
+  onComplete
 }: WhopCheckoutProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const hasScannedRef = useRef(false);
@@ -99,6 +101,30 @@ export function WhopCheckout({
         if (window.whopCheckoutLoader?.scan) {
           window.whopCheckoutLoader.scan();
           hasScannedRef.current = true;
+          
+          // Listen for checkout completion events
+          if (onComplete && containerRef.current) {
+            // Whop checkout emits events on the container
+            const handleComplete = () => {
+              onComplete();
+            };
+            
+            // Listen for messages from Whop checkout iframe
+            const messageHandler = (event: MessageEvent) => {
+              // Check if message is from Whop checkout
+              if (event.data && typeof event.data === 'object') {
+                if (event.data.type === 'whop-checkout-complete' || event.data.event === 'checkout.completed') {
+                  handleComplete();
+                }
+              }
+            };
+            
+            window.addEventListener('message', messageHandler);
+            
+            return () => {
+              window.removeEventListener('message', messageHandler);
+            };
+          }
         }
       } catch (error) {
         console.error('Error loading Whop checkout:', error);
@@ -118,8 +144,9 @@ export function WhopCheckout({
     return () => {
       mounted = false;
       clearInterval(retryInterval);
+      hasScannedRef.current = false; // Reset so it can scan again when remounted
     };
-  }, [planId, theme, accentColor]);
+  }, [planId, theme, accentColor, onComplete]);
 
   return (
     <div 

@@ -55,16 +55,19 @@ export function RSVPButton() {
     return () => clearInterval(interval)
   }, [])
 
-  const handleRSVP = async () => {
-    // Prevent spam clicking
-    if (loading) return
-    
+  const handleRSVP = () => {
+    // Just open the modal - don't increment count yet
+    // Count will increment when checkout is completed
+    setShowModal(true)
+  }
+  
+  const handleCheckoutComplete = async () => {
+    // When checkout is completed, increment the count
     const newCount = await incrementRSVP()
     setCount(newCount)
     setJustRSVPed(true)
     setTimeout(() => setJustRSVPed(false), 2000)
-    // Open the modal with checkout
-    setShowModal(true)
+    setShowModal(false)
   }
 
   const closeModal = () => {
@@ -182,11 +185,12 @@ export function RSVPButton() {
                 </div>
 
                 {/* Whop Checkout Embed */}
-                <div className="mt-6">
+                <div className="mt-6" key={showModal ? 'checkout-open' : 'checkout-closed'}>
                   <WhopCheckout 
                     planId="plan_6qlhHFelOu6cx"
                     theme="system"
                     accentColor="orange"
+                    onComplete={handleCheckoutComplete}
                   />
                 </div>
               </motion.div>
