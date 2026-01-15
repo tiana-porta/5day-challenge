@@ -4,31 +4,59 @@ import { useEffect, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { WhopCheckout } from './WhopCheckout'
 
-function getRSVPCount(): number {
-  if (typeof window === 'undefined') return 0
-  const stored = localStorage.getItem('rsvp_total')
-  return stored ? parseInt(stored, 10) : 0
+async function getRSVPCount(): Promise<number> {
+  try {
+    const response = await fetch('/api/rsvp')
+    const data = await response.json()
+    return data.count || 0
+  } catch (error) {
+    console.error('Error fetching RSVP count:', error)
+    return 0
+  }
 }
 
-function incrementRSVP(): number {
-  if (typeof window === 'undefined') return 0
-  const current = getRSVPCount()
-  const newCount = current + 1
-  localStorage.setItem('rsvp_total', newCount.toString())
-  return newCount
+async function incrementRSVP(): Promise<number> {
+  try {
+    const response = await fetch('/api/rsvp', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    })
+    const data = await response.json()
+    return data.count || 0
+  } catch (error) {
+    console.error('Error incrementing RSVP:', error)
+    return 0
+  }
 }
 
 export function RSVPButton() {
   const [count, setCount] = useState(0)
   const [justRSVPed, setJustRSVPed] = useState(false)
   const [showModal, setShowModal] = useState(false)
+  const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    setCount(getRSVPCount())
+    // Fetch initial count from API
+    const fetchCount = async () => {
+      const initialCount = await getRSVPCount()
+      setCount(initialCount)
+      setLoading(false)
+    }
+    fetchCount()
+
+    // Poll for updates every 5 seconds to get real-time count from other users
+    const interval = setInterval(async () => {
+      const updatedCount = await getRSVPCount()
+      setCount(updatedCount)
+    }, 5000)
+
+    return () => clearInterval(interval)
   }, [])
 
-  const handleRSVP = () => {
-    const newCount = incrementRSVP()
+  const handleRSVP = async () => {
+    const newCount = await incrementRSVP()
     setCount(newCount)
     setJustRSVPed(true)
     setTimeout(() => setJustRSVPed(false), 2000)
