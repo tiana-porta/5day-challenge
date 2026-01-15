@@ -95,33 +95,53 @@ export function WhopCheckout({
 
         if (!mounted) return;
 
-        // Wait for DOM element to be ready
-        await new Promise(resolve => setTimeout(resolve, 200));
+        // Wait for DOM element to be ready - longer wait for modal animations
+        await new Promise(resolve => setTimeout(resolve, 500));
 
         if (!mounted || !containerRef.current) return;
 
-        // Clear any existing content
+        // Clear any existing content completely
         if (containerRef.current) {
-          containerRef.current.innerHTML = '';
-          // Re-add the data attributes
+          // Remove all children
+          while (containerRef.current.firstChild) {
+            containerRef.current.removeChild(containerRef.current.firstChild);
+          }
+          
+          // Remove all attributes
+          const attrs = containerRef.current.attributes;
+          while (attrs.length > 0) {
+            containerRef.current.removeAttribute(attrs[0].name);
+          }
+          
+          // Re-add the class and data attributes fresh
           containerRef.current.className = 'whop-checkout-embed';
           containerRef.current.setAttribute('data-whop-checkout-plan-id', planId);
           containerRef.current.setAttribute('data-whop-checkout-theme', theme);
           containerRef.current.setAttribute('data-whop-checkout-theme-accent-color', accentColor);
         }
 
-        // Scan for checkout embeds - call multiple times to ensure it picks up
+        // Wait a bit more to ensure container is fully ready
+        await new Promise(resolve => setTimeout(resolve, 200));
+
+        // Scan for checkout embeds - call multiple times with delays
         if (window.whopCheckoutLoader?.scan) {
-          // Call scan immediately
+          // First scan
           window.whopCheckoutLoader.scan();
           hasScannedRef.current = true;
           
-          // Call scan again after a short delay to ensure it catches the element
+          // Second scan after delay
           setTimeout(() => {
-            if (mounted && window.whopCheckoutLoader?.scan) {
+            if (mounted && window.whopCheckoutLoader?.scan && containerRef.current) {
               window.whopCheckoutLoader.scan();
             }
-          }, 300);
+          }, 500);
+          
+          // Third scan to be safe
+          setTimeout(() => {
+            if (mounted && window.whopCheckoutLoader?.scan && containerRef.current) {
+              window.whopCheckoutLoader.scan();
+            }
+          }, 1000);
           
           // Listen for checkout completion events
           if (onComplete) {

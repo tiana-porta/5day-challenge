@@ -59,9 +59,12 @@ export function RSVPButton() {
   const handleRSVP = () => {
     // Just open the modal - don't increment count yet
     // Count will increment when checkout is completed
-    // Force remount of checkout by changing key
+    // Force remount of checkout by changing key BEFORE opening modal
     setCheckoutKey(prev => prev + 1)
-    setShowModal(true)
+    // Small delay to ensure key change takes effect
+    setTimeout(() => {
+      setShowModal(true)
+    }, 50)
   }
   
   const handleCheckoutComplete = async () => {
@@ -188,14 +191,16 @@ export function RSVPButton() {
                 </div>
 
                 {/* Whop Checkout Embed */}
-                <div className="mt-6">
-                  <WhopCheckout 
-                    key={checkoutKey}
-                    planId="plan_6qlhHFelOu6cx"
-                    theme="system"
-                    accentColor="orange"
-                    onComplete={handleCheckoutComplete}
-                  />
+                <div className="mt-6 min-h-[400px]">
+                  {showModal && (
+                    <WhopCheckout 
+                      key={`checkout-${checkoutKey}`}
+                      planId="plan_6qlhHFelOu6cx"
+                      theme="system"
+                      accentColor="orange"
+                      onComplete={handleCheckoutComplete}
+                    />
+                  )}
                 </div>
               </motion.div>
             </motion.div>
