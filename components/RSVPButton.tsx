@@ -56,6 +56,9 @@ export function RSVPButton() {
   }, [])
 
   const handleRSVP = async () => {
+    // Prevent spam clicking
+    if (loading) return
+    
     const newCount = await incrementRSVP()
     setCount(newCount)
     setJustRSVPed(true)
