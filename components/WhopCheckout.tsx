@@ -189,9 +189,12 @@ export function WhopCheckout({
     };
   }, [planId, theme, accentColor, onComplete]);
 
+  const uniqueId = useRef(`whop-checkout-${Date.now()}-${Math.random()}`);
+
   return (
     <div 
       ref={containerRef}
+      id={uniqueId.current}
       className="whop-checkout-embed"
       data-whop-checkout-plan-id={planId}
       data-whop-checkout-theme={theme}
