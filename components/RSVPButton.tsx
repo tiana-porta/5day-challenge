@@ -191,17 +191,25 @@ export function RSVPButton() {
                 </div>
 
                 {/* Whop Checkout Embed */}
-                <div className="mt-6 min-h-[400px]">
+                <AnimatePresence mode="wait">
                   {showModal && (
-                    <WhopCheckout 
+                    <motion.div
                       key={`checkout-${checkoutKey}`}
-                      planId="plan_6qlhHFelOu6cx"
-                      theme="system"
-                      accentColor="orange"
-                      onComplete={handleCheckoutComplete}
-                    />
+                      className="mt-6 min-h-[400px]"
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      exit={{ opacity: 0 }}
+                    >
+                      <WhopCheckout 
+                        key={`checkout-${checkoutKey}`}
+                        planId="plan_6qlhHFelOu6cx"
+                        theme="system"
+                        accentColor="orange"
+                        onComplete={handleCheckoutComplete}
+                      />
+                    </motion.div>
                   )}
-                </div>
+                </AnimatePresence>
               </motion.div>
             </motion.div>
           </>
