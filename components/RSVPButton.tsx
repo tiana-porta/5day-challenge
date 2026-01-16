@@ -69,16 +69,18 @@ export function RSVPButton() {
   }
   
   const handleCheckoutComplete = async () => {
-    console.log('handleCheckoutComplete called - recording RSVP...')
+    console.log('🎉 handleCheckoutComplete called - recording RSVP...')
     // When checkout is completed, increment the count and show success
     try {
+      console.log('📤 Sending POST request to /api/rsvp...')
       const newCount = await incrementRSVP()
+      console.log('✅ RSVP recorded! Response count:', newCount)
       setCount(newCount)
       setCheckoutComplete(true)
       setJustRSVPed(true)
-      console.log('RSVP recorded! New count:', newCount)
     } catch (error) {
-      console.error('Error recording RSVP:', error)
+      console.error('❌ Error recording RSVP:', error)
+      alert('Failed to record RSVP. Please refresh and try again.')
     }
   }
 

@@ -117,74 +117,140 @@ export function WhopCheckout({
     let messageHandler: ((event: MessageEvent) => void) | null = null;
     let hasCompleted = false;
     
+    // Log all messages for debugging
+    const debugMessageHandler = (event: MessageEvent) => {
+      // Only log messages that might be from Whop
+      if (event.data && (
+        typeof event.data === 'object' || 
+        typeof event.data === 'string' ||
+        event.origin?.includes('whop.com') ||
+        event.origin?.includes('whop.gg')
+      )) {
+        console.log('📨 Message event received:', {
+          origin: event.origin,
+          data: event.data,
+          type: typeof event.data
+        });
+      }
+    };
+    
     messageHandler = (event: MessageEvent) => {
       // Prevent duplicate calls
       if (hasCompleted) return;
       
+      // Log for debugging
+      if (event.data && (
+        typeof event.data === 'object' || 
+        typeof event.data === 'string'
+      )) {
+        console.log('🔍 Checking message:', event.data);
+      }
+      
       // Check if message is from Whop checkout
-      if (event.data && typeof event.data === 'object') {
+      if (event.data) {
         const data = event.data;
         
-        // Multiple ways Whop checkout can signal completion
-        const isComplete = 
-          data.type === 'whop-checkout-complete' || 
-          data.event === 'checkout.completed' ||
-          data.whopCheckoutComplete === true ||
-          data.status === 'completed' ||
-          (data.type === 'whop' && data.action === 'checkout-complete') ||
-          (typeof data === 'string' && data.includes('checkout-complete'));
+        // Check various completion signals
+        let isComplete = false;
+        
+        if (typeof data === 'object') {
+          isComplete = 
+            data.type === 'whop-checkout-complete' || 
+            data.event === 'checkout.completed' ||
+            data.event === 'checkout_completed' ||
+            data.whopCheckoutComplete === true ||
+            data.status === 'completed' ||
+            data.status === 'success' ||
+            (data.type === 'whop' && data.action === 'checkout-complete') ||
+            data.checkoutComplete === true ||
+            data.completed === true ||
+            (data.type && data.type.includes('complete')) ||
+            (data.event && data.event.includes('complete'));
+        } else if (typeof data === 'string') {
+          isComplete = 
+            data.includes('checkout-complete') ||
+            data.includes('checkout_complete') ||
+            data.includes('completed') ||
+            data.includes('success');
+        }
         
         if (isComplete) {
           hasCompleted = true;
-          console.log('Checkout completed! Incrementing RSVP count...');
+          console.log('✅ Checkout completed! Incrementing RSVP count...', data);
           onComplete();
+          return;
         }
       }
       
       // Also check for success indicators in the DOM
-      // Whop checkout might add success classes or elements
       if (containerRef.current) {
         const successIndicator = containerRef.current.querySelector(
-          '[class*="success"], [class*="complete"], [data-success]'
+          '[class*="success"], [class*="complete"], [class*="thank"], [data-success], [data-completed]'
         );
         if (successIndicator && !hasCompleted) {
           hasCompleted = true;
-          console.log('Checkout completed (DOM detected)! Incrementing RSVP count...');
+          console.log('✅ Checkout completed (DOM detected)! Incrementing RSVP count...');
           onComplete();
+          return;
         }
       }
     };
     
+    // Listen to all messages for debugging
+    window.addEventListener('message', debugMessageHandler);
     window.addEventListener('message', messageHandler);
     
     // Also poll for completion indicators in case message events don't fire
     const completionPoll = setInterval(() => {
       if (hasCompleted || !containerRef.current || !onComplete) {
-        clearInterval(completionPoll);
+        if (hasCompleted) {
+          clearInterval(completionPoll);
+        }
         return;
       }
       
       // Look for Whop checkout success indicators
       const successElements = containerRef.current.querySelectorAll(
-        '[class*="success"], [class*="complete"], [class*="thank"], [data-status="completed"]'
+        '[class*="success"], [class*="complete"], [class*="thank"], [class*="confirmation"], [data-status="completed"], [data-success]'
       );
       
       // Also check if we can find a "thank you" or "success" message
       const text = containerRef.current.textContent || '';
-      const hasSuccessText = /thank|success|complete|confirmation/i.test(text);
+      const hasSuccessText = /thank\s*you|success|complete|confirmation|you['']re\s*(in|all|set)/i.test(text);
+      
+      // Check for iframe with success indicators
+      const iframe = containerRef.current.querySelector('iframe');
+      if (iframe && iframe.contentWindow) {
+        try {
+          const iframeText = iframe.contentDocument?.body?.textContent || '';
+          if (/thank\s*you|success|complete/i.test(iframeText)) {
+            console.log('✅ Checkout completed (iframe text detected)! Incrementing RSVP count...');
+            hasCompleted = true;
+            clearInterval(completionPoll);
+            onComplete();
+            return;
+          }
+        } catch (e) {
+          // Cross-origin iframe, can't access
+        }
+      }
       
       if ((successElements.length > 0 || hasSuccessText) && containerRef.current.children.length > 0) {
         hasCompleted = true;
-        console.log('Checkout completed (poll detected)! Incrementing RSVP count...');
+        console.log('✅ Checkout completed (poll detected)! Incrementing RSVP count...', {
+          successElements: successElements.length,
+          hasSuccessText
+        });
         clearInterval(completionPoll);
         onComplete();
       }
-    }, 2000); // Check every 2 seconds
+    }, 1000); // Check every 1 second (more frequent)
     
     return () => {
       if (messageHandler) {
         window.removeEventListener('message', messageHandler);
       }
+      window.removeEventListener('message', debugMessageHandler);
       clearInterval(completionPoll);
     };
   }, [onComplete]);

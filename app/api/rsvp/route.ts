@@ -14,6 +14,7 @@ export async function GET() {
 // POST: Increment RSVP count
 export async function POST(request: NextRequest) {
   rsvpCount += 1
+  console.log(`📝 RSVP incremented! New count: ${rsvpCount}`)
   return NextResponse.json({ count: rsvpCount, success: true })
 }
 
