@@ -33,15 +33,17 @@ function loadWhopCheckoutScript(): Promise<void> {
         }
       }, 100);
 
-      // Timeout after 5 seconds
+      // Timeout after 10 seconds (increased for slower connections)
       setTimeout(() => {
         clearInterval(checkInterval);
         if (window.whopCheckoutLoader?.scan) {
           resolve();
         } else {
-          reject(new Error('Script load timeout'));
+          // Don't reject, just resolve - script might load later
+          console.warn('Whop checkout script taking longer than expected to load');
+          resolve();
         }
-      }, 5000);
+      }, 10000);
       return;
     }
 
@@ -50,8 +52,25 @@ function loadWhopCheckoutScript(): Promise<void> {
     if (existingScript) {
       window.whopCheckoutScriptLoaded = true;
       // Wait for it to load
-      existingScript.addEventListener('load', () => resolve());
-      existingScript.addEventListener('error', () => reject(new Error('Script load failed')));
+      const loadHandler = () => {
+        existingScript.removeEventListener('load', loadHandler);
+        resolve();
+      };
+      const errorHandler = () => {
+        existingScript.removeEventListener('error', errorHandler);
+        // Don't reject, just resolve and let retry mechanism handle it
+        console.warn('Existing Whop checkout script had error, will retry');
+        resolve();
+      };
+      existingScript.addEventListener('load', loadHandler);
+      existingScript.addEventListener('error', errorHandler);
+      
+      // If script is already loaded, resolve immediately
+      if (window.whopCheckoutLoader?.scan) {
+        existingScript.removeEventListener('load', loadHandler);
+        existingScript.removeEventListener('error', errorHandler);
+        resolve();
+      }
       return;
     }
 
@@ -68,7 +87,10 @@ function loadWhopCheckoutScript(): Promise<void> {
 
     script.onerror = () => {
       window.whopCheckoutScriptLoaded = false;
-      reject(new Error('Failed to load Whop checkout script'));
+      // Don't reject immediately, might be a temporary network issue
+      // The retry mechanism will handle it
+      console.warn('Whop checkout script failed to load, will retry');
+      resolve(); // Resolve anyway so we can retry later
     };
 
     document.head.appendChild(script);
