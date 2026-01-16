@@ -150,17 +150,15 @@ export function RSVPButton() {
               style={{ pointerEvents: checkoutComplete ? 'auto' : 'none' }}
             />
             
-            {/* Modal Content */}
+            {/* Modal Content - allow all interactions */}
             <motion.div
-              className="fixed inset-0 z-50 flex items-center justify-center p-4"
+              className="fixed inset-0 z-50 flex items-center justify-center p-4 pointer-events-none"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              onClick={checkoutComplete ? closeModal : undefined}
-              style={{ pointerEvents: checkoutComplete ? 'auto' : 'none' }}
             >
               <motion.div
-                className="backdrop-blur-xl bg-dark/95 border-2 border-primary/30 rounded-3xl p-8 max-w-2xl w-full max-h-[90vh] overflow-y-auto relative"
+                className="backdrop-blur-xl bg-dark/95 border-2 border-primary/30 rounded-3xl p-8 max-w-2xl w-full max-h-[90vh] overflow-y-auto relative pointer-events-auto"
                 initial={{ scale: 0.9, y: 20 }}
                 animate={{ scale: 1, y: 0 }}
                 exit={{ scale: 0.9, y: 20 }}

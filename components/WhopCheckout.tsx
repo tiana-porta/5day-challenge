@@ -344,10 +344,11 @@ export function WhopCheckout({
     <div 
       ref={containerRef}
       id={uniqueId.current}
-      className="whop-checkout-embed"
+      className="whop-checkout-embed pointer-events-auto"
       data-whop-checkout-plan-id={planId}
       data-whop-checkout-theme={theme}
       data-whop-checkout-theme-accent-color={accentColor}
+      style={{ pointerEvents: 'auto' }}
     />
   );
 }
