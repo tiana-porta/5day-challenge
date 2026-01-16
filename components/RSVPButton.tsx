@@ -199,6 +199,7 @@ export function RSVPButton() {
                     accentColor="orange"
                     onComplete={handleCheckoutComplete}
                     isVisible={showModal}
+                    checkoutKey={checkoutKey}
                   />
                 </div>
               </motion.div>

@@ -6,6 +6,7 @@ interface WhopCheckoutProps {
   accentColor?: string;
   onComplete?: () => void;
   isVisible?: boolean;
+  checkoutKey?: number;
 }
 
 declare global {
@@ -103,7 +104,8 @@ export function WhopCheckout({
   theme = 'system',
   accentColor = 'orange',
   onComplete,
-  isVisible = true
+  isVisible = true,
+  checkoutKey
 }: WhopCheckoutProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const hasScannedRef = useRef(false);
@@ -222,32 +224,63 @@ export function WhopCheckout({
     };
   }, [planId, theme, accentColor, onComplete, isVisible]);
 
-  // When visibility changes, rescan
+  // When visibility changes, completely reset and rescan
   useEffect(() => {
-    if (isVisible && containerRef.current && window.whopCheckoutLoader?.scan) {
-      // Clear container first
+    if (!isVisible || !containerRef.current) return;
+    
+    const resetAndRescan = async () => {
+      // Remove ALL Whop checkout elements from the page first
+      const allCheckouts = document.querySelectorAll('.whop-checkout-embed, [data-whop-checkout-plan-id], [id*="whop-checkout"]');
+      allCheckouts.forEach(el => {
+        if (el !== containerRef.current) {
+          el.remove();
+        }
+      });
+      
+      // Clear our container completely
       if (containerRef.current) {
         containerRef.current.innerHTML = '';
+        // Remove all attributes
+        const attrs = Array.from(containerRef.current.attributes);
+        attrs.forEach(attr => {
+          if (attr.name !== 'ref') {
+            containerRef.current?.removeAttribute(attr.name);
+          }
+        });
+      }
+      
+      // Wait for cleanup
+      await new Promise(resolve => setTimeout(resolve, 100));
+      
+      // Re-setup container
+      if (containerRef.current) {
         containerRef.current.className = 'whop-checkout-embed';
         containerRef.current.setAttribute('data-whop-checkout-plan-id', planId);
         containerRef.current.setAttribute('data-whop-checkout-theme', theme);
         containerRef.current.setAttribute('data-whop-checkout-theme-accent-color', accentColor);
       }
       
-      // Wait a bit then scan
-      setTimeout(() => {
-        if (window.whopCheckoutLoader?.scan && containerRef.current) {
-          window.whopCheckoutLoader.scan();
-        }
-      }, 300);
+      // Wait for DOM to update
+      await new Promise(resolve => setTimeout(resolve, 300));
       
-      setTimeout(() => {
-        if (window.whopCheckoutLoader?.scan && containerRef.current) {
-          window.whopCheckoutLoader.scan();
-        }
-      }, 800);
-    }
-  }, [isVisible, planId, theme, accentColor]);
+      // Force multiple scans
+      if (window.whopCheckoutLoader?.scan) {
+        // Immediate scan
+        window.whopCheckoutLoader.scan();
+        
+        // Additional scans at intervals
+        [500, 1000, 1500, 2000].forEach(delay => {
+          setTimeout(() => {
+            if (window.whopCheckoutLoader?.scan && containerRef.current) {
+              window.whopCheckoutLoader.scan();
+            }
+          }, delay);
+        });
+      }
+    };
+    
+    resetAndRescan();
+  }, [isVisible, planId, theme, accentColor, checkoutKey]);
 
   const uniqueId = useRef(`whop-checkout-${Date.now()}-${Math.random()}`);
 
