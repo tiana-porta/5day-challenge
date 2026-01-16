@@ -117,10 +117,19 @@ export function WhopCheckout({
 
         if (!mounted) return;
 
-        // Wait for DOM element to be ready - longer wait for modal animations
-        await new Promise(resolve => setTimeout(resolve, 500));
+        // Wait for DOM element to be ready - wait for modal animation
+        let retries = 0;
+        while (retries < 20 && (!containerRef.current || containerRef.current.offsetParent === null)) {
+          await new Promise(resolve => setTimeout(resolve, 100));
+          retries++;
+        }
 
         if (!mounted || !containerRef.current) return;
+
+        // Ensure container is visible
+        if (containerRef.current.offsetParent === null) {
+          console.warn('Checkout container not visible yet');
+        }
 
         // Clear any existing content completely
         if (containerRef.current) {
@@ -130,10 +139,10 @@ export function WhopCheckout({
           }
           
           // Remove all attributes
-          const attrs = containerRef.current.attributes;
-          while (attrs.length > 0) {
-            containerRef.current.removeAttribute(attrs[0].name);
-          }
+          const attrs = Array.from(containerRef.current.attributes);
+          attrs.forEach(attr => {
+            containerRef.current?.removeAttribute(attr.name);
+          });
           
           // Re-add the class and data attributes fresh
           containerRef.current.className = 'whop-checkout-embed';
@@ -142,28 +151,25 @@ export function WhopCheckout({
           containerRef.current.setAttribute('data-whop-checkout-theme-accent-color', accentColor);
         }
 
-        // Wait a bit more to ensure container is fully ready
-        await new Promise(resolve => setTimeout(resolve, 200));
+        // Wait for modal animation to complete
+        await new Promise(resolve => setTimeout(resolve, 600));
 
         // Scan for checkout embeds - call multiple times with delays
         if (window.whopCheckoutLoader?.scan) {
-          // First scan
+          // Force immediate scan
           window.whopCheckoutLoader.scan();
           hasScannedRef.current = true;
           
-          // Second scan after delay
-          setTimeout(() => {
-            if (mounted && window.whopCheckoutLoader?.scan && containerRef.current) {
-              window.whopCheckoutLoader.scan();
-            }
-          }, 500);
-          
-          // Third scan to be safe
-          setTimeout(() => {
-            if (mounted && window.whopCheckoutLoader?.scan && containerRef.current) {
-              window.whopCheckoutLoader.scan();
-            }
-          }, 1000);
+          // Multiple scans at intervals
+          const scanDelays = [300, 600, 1000, 1500];
+          scanDelays.forEach(delay => {
+            setTimeout(() => {
+              if (mounted && window.whopCheckoutLoader?.scan && containerRef.current && containerRef.current.offsetParent !== null) {
+                // Force rescan
+                window.whopCheckoutLoader.scan();
+              }
+            }, delay);
+          });
           
           // Listen for checkout completion events
           if (onComplete) {
