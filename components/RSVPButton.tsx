@@ -85,10 +85,6 @@ export function RSVPButton() {
     }
   }
 
-  const closeModal = () => {
-    setShowModal(false)
-  }
-
   return (
     <>
       <div className="flex flex-col items-center justify-center gap-6">
@@ -160,7 +156,8 @@ export function RSVPButton() {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              onClick={closeModal}
+              onClick={checkoutComplete ? closeModal : undefined}
+              style={{ pointerEvents: checkoutComplete ? 'auto' : 'none' }}
             >
               <motion.div
                 className="backdrop-blur-xl bg-dark/95 border-2 border-primary/30 rounded-3xl p-8 max-w-2xl w-full max-h-[90vh] overflow-y-auto relative"
