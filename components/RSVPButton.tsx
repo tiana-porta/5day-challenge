@@ -69,11 +69,17 @@ export function RSVPButton() {
   }
   
   const handleCheckoutComplete = async () => {
+    console.log('handleCheckoutComplete called - recording RSVP...')
     // When checkout is completed, increment the count and show success
-    const newCount = await incrementRSVP()
-    setCount(newCount)
-    setCheckoutComplete(true)
-    setJustRSVPed(true)
+    try {
+      const newCount = await incrementRSVP()
+      setCount(newCount)
+      setCheckoutComplete(true)
+      setJustRSVPed(true)
+      console.log('RSVP recorded! New count:', newCount)
+    } catch (error) {
+      console.error('Error recording RSVP:', error)
+    }
   }
 
   const closeModal = () => {
