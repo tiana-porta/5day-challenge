@@ -110,143 +110,48 @@ export function WhopCheckout({
   const containerRef = useRef<HTMLDivElement>(null);
   const hasScannedRef = useRef(false);
 
+  // Listen for checkout completion events
   useEffect(() => {
-    // Don't initialize if not visible
-    if (!isVisible) return;
+    if (!onComplete) return;
     
-    let mounted = true;
     let messageHandler: ((event: MessageEvent) => void) | null = null;
-
-    const initializeCheckout = async () => {
-      try {
-        // Load script (only loads once globally)
-        await loadWhopCheckoutScript();
-
-        if (!mounted) return;
-
-        // Wait for DOM element to be ready - wait for modal animation
-        let retries = 0;
-        while (retries < 20 && (!containerRef.current || containerRef.current.offsetParent === null)) {
-          await new Promise(resolve => setTimeout(resolve, 100));
-          retries++;
+    
+    messageHandler = (event: MessageEvent) => {
+      // Check if message is from Whop checkout
+      if (event.data && typeof event.data === 'object') {
+        if (event.data.type === 'whop-checkout-complete' || 
+            event.data.event === 'checkout.completed' ||
+            event.data.whopCheckoutComplete) {
+          onComplete();
         }
-
-        if (!mounted || !containerRef.current) return;
-
-        // Ensure container is visible
-        if (containerRef.current.offsetParent === null) {
-          console.warn('Checkout container not visible yet');
-        }
-
-        // Clear any existing content completely
-        if (containerRef.current) {
-          // Remove all children
-          while (containerRef.current.firstChild) {
-            containerRef.current.removeChild(containerRef.current.firstChild);
-          }
-          
-          // Remove all attributes
-          const attrs = Array.from(containerRef.current.attributes);
-          attrs.forEach(attr => {
-            containerRef.current?.removeAttribute(attr.name);
-          });
-          
-          // Re-add the class and data attributes fresh
-          containerRef.current.className = 'whop-checkout-embed';
-          containerRef.current.setAttribute('data-whop-checkout-plan-id', planId);
-          containerRef.current.setAttribute('data-whop-checkout-theme', theme);
-          containerRef.current.setAttribute('data-whop-checkout-theme-accent-color', accentColor);
-        }
-
-        // Wait for modal animation to complete
-        await new Promise(resolve => setTimeout(resolve, 600));
-
-        // Scan for checkout embeds - call multiple times with delays
-        if (window.whopCheckoutLoader?.scan) {
-          // Force immediate scan
-          window.whopCheckoutLoader.scan();
-          hasScannedRef.current = true;
-          
-          // Multiple scans at intervals
-          const scanDelays = [300, 600, 1000, 1500];
-          scanDelays.forEach(delay => {
-            setTimeout(() => {
-              if (mounted && window.whopCheckoutLoader?.scan && containerRef.current && containerRef.current.offsetParent !== null) {
-                // Force rescan
-                window.whopCheckoutLoader.scan();
-              }
-            }, delay);
-          });
-          
-          // Listen for checkout completion events
-          if (onComplete) {
-            messageHandler = (event: MessageEvent) => {
-              // Check if message is from Whop checkout
-              if (event.data && typeof event.data === 'object') {
-                if (event.data.type === 'whop-checkout-complete' || 
-                    event.data.event === 'checkout.completed' ||
-                    event.data.whopCheckoutComplete) {
-                  onComplete();
-                }
-              }
-            };
-            
-            window.addEventListener('message', messageHandler);
-          }
-        }
-      } catch (error) {
-        console.error('Error loading Whop checkout:', error);
       }
     };
-
-    initializeCheckout();
-
-    // Re-scan if loader becomes available later or if element wasn't found
-    // BUT only if content hasn't loaded yet - and stop immediately once it loads
-    const retryInterval = setInterval(() => {
-      if (!mounted || !containerRef.current || !window.whopCheckoutLoader?.scan) return;
-      
-      // Check if checkout has rendered (has children, iframe, form, or input)
-      const hasContent = containerRef.current.children.length > 0 || 
-                        containerRef.current.querySelector('iframe') ||
-                        containerRef.current.querySelector('form') ||
-                        containerRef.current.querySelector('input') ||
-                        containerRef.current.querySelector('button');
-      
-      // If content loaded, stop ALL retries immediately
-      if (hasContent) {
-        clearInterval(retryInterval);
-        hasScannedRef.current = true; // Mark as loaded
-        return;
-      }
-      
-      // Only scan if content hasn't loaded
-      if (!hasContent) {
-        window.whopCheckoutLoader.scan();
-      }
-    }, 500);
-
+    
+    window.addEventListener('message', messageHandler);
+    
     return () => {
-      mounted = false;
-      clearInterval(retryInterval);
       if (messageHandler) {
         window.removeEventListener('message', messageHandler);
       }
-      hasScannedRef.current = false; // Reset so it can scan again when remounted
     };
-  }, [planId, theme, accentColor, onComplete, isVisible]);
+  }, [onComplete]);
 
-  // When visibility changes, set up checkout and scan
+  // Set up checkout when visible - only initialize once, never clear once loaded
   useEffect(() => {
     if (!isVisible || !containerRef.current) return;
     
     let mounted = true;
     let hasLoaded = false;
+    let retryInterval: NodeJS.Timeout | null = null;
     let cleanupTimeouts: NodeJS.Timeout[] = [];
     
     const clearAllTimeouts = () => {
       cleanupTimeouts.forEach(timeout => clearTimeout(timeout));
       cleanupTimeouts = [];
+      if (retryInterval) {
+        clearInterval(retryInterval);
+        retryInterval = null;
+      }
     };
     
     const checkIfContentLoaded = (): boolean => {
@@ -272,7 +177,13 @@ export function WhopCheckout({
       
       if (!mounted || !containerRef.current) return;
       
-      // Set up container attributes
+      // Check if content already loaded - if so, don't do anything!
+      if (checkIfContentLoaded()) {
+        hasLoaded = true;
+        return;
+      }
+      
+      // Set up container attributes only if not already set
       if (!containerRef.current.hasAttribute('data-whop-checkout-plan-id')) {
         containerRef.current.className = 'whop-checkout-embed pointer-events-auto';
         containerRef.current.setAttribute('data-whop-checkout-plan-id', planId);
@@ -283,7 +194,7 @@ export function WhopCheckout({
       // Wait for modal animation
       await new Promise(resolve => setTimeout(resolve, 600));
       
-      if (!mounted || !containerRef.current) return;
+      if (!mounted || !containerRef.current || hasLoaded) return;
       
       // Load script if needed
       try {
@@ -292,8 +203,10 @@ export function WhopCheckout({
         console.warn('Script load warning:', error);
       }
       
+      if (!mounted || !containerRef.current || hasLoaded) return;
+      
       // Initial scan
-      if (window.whopCheckoutLoader?.scan && mounted) {
+      if (window.whopCheckoutLoader?.scan) {
         window.whopCheckoutLoader.scan();
         
         // Retry scans - but stop immediately if content loads
@@ -301,7 +214,6 @@ export function WhopCheckout({
         scanDelays.forEach(delay => {
           const timeout = setTimeout(() => {
             if (!mounted || hasLoaded) {
-              clearAllTimeouts();
               return;
             }
             
@@ -320,6 +232,29 @@ export function WhopCheckout({
           cleanupTimeouts.push(timeout);
         });
       }
+      
+      // Fallback retry interval - but stops immediately when content loads
+      retryInterval = setInterval(() => {
+        if (!mounted || hasLoaded || !containerRef.current || !window.whopCheckoutLoader?.scan) {
+          if (hasLoaded && retryInterval) {
+            clearInterval(retryInterval);
+            retryInterval = null;
+          }
+          return;
+        }
+        
+        // Check if content loaded - if yes, stop immediately
+        if (checkIfContentLoaded()) {
+          hasLoaded = true;
+          clearAllTimeouts();
+          return;
+        }
+        
+        // Only scan if content hasn't loaded
+        if (!hasLoaded) {
+          window.whopCheckoutLoader.scan();
+        }
+      }, 1000);
     };
     
     setupAndScan();
