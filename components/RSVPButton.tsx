@@ -57,9 +57,16 @@ export function RSVPButton() {
     return () => clearInterval(interval)
   }, [])
 
-  const handleRSVP = () => {
-    // Just open the modal - don't increment count yet
-    // Count will increment when checkout is completed
+  const handleRSVP = async () => {
+    // Increment RSVP count immediately when button is clicked
+    try {
+      const newCount = await incrementRSVP()
+      setCount(newCount)
+      setJustRSVPed(true)
+    } catch (error) {
+      console.error('Error recording RSVP:', error)
+    }
+    
     // Force remount of checkout by changing key BEFORE opening modal
     setCheckoutKey(prev => prev + 1)
     // Small delay to ensure key change takes effect
@@ -68,20 +75,10 @@ export function RSVPButton() {
     }, 50)
   }
   
-  const handleCheckoutComplete = async () => {
-    console.log('🎉 handleCheckoutComplete called - recording RSVP...')
-    // When checkout is completed, increment the count and show success
-    try {
-      console.log('📤 Sending POST request to /api/rsvp...')
-      const newCount = await incrementRSVP()
-      console.log('✅ RSVP recorded! Response count:', newCount)
-      setCount(newCount)
-      setCheckoutComplete(true)
-      setJustRSVPed(true)
-    } catch (error) {
-      console.error('❌ Error recording RSVP:', error)
-      alert('Failed to record RSVP. Please refresh and try again.')
-    }
+  const handleCheckoutComplete = () => {
+    // When checkout is completed, just show success page
+    // RSVP count was already incremented when button was clicked
+    setCheckoutComplete(true)
   }
 
   const closeModal = () => {
