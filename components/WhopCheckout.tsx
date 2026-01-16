@@ -202,15 +202,22 @@ export function WhopCheckout({
     initializeCheckout();
 
     // Re-scan if loader becomes available later or if element wasn't found
+    // BUT only if content hasn't loaded yet
     const retryInterval = setInterval(() => {
-      if (mounted && containerRef.current && window.whopCheckoutLoader?.scan) {
-        // Check if checkout has rendered (has children or iframe)
-        const hasContent = containerRef.current.children.length > 0 || 
-                          containerRef.current.querySelector('iframe');
-        
-        if (!hasContent) {
-          window.whopCheckoutLoader.scan();
-        }
+      if (!mounted || !containerRef.current || !window.whopCheckoutLoader?.scan) return;
+      
+      // Check if checkout has rendered (has children, iframe, form, or input)
+      const hasContent = containerRef.current.children.length > 0 || 
+                        containerRef.current.querySelector('iframe') ||
+                        containerRef.current.querySelector('form') ||
+                        containerRef.current.querySelector('input');
+      
+      // Only scan if content hasn't loaded - never clear if it has!
+      if (!hasContent) {
+        window.whopCheckoutLoader.scan();
+      } else {
+        // Content loaded, stop retrying
+        clearInterval(retryInterval);
       }
     }, 500);
 
@@ -229,8 +236,31 @@ export function WhopCheckout({
     if (!isVisible || !containerRef.current) return;
     
     let mounted = true;
+    let hasLoaded = false;
+    let cleanupTimeouts: NodeJS.Timeout[] = [];
+    
+    const clearAllTimeouts = () => {
+      cleanupTimeouts.forEach(timeout => clearTimeout(timeout));
+      cleanupTimeouts = [];
+    };
+    
+    const checkIfContentLoaded = (): boolean => {
+      if (!containerRef.current) return false;
+      const hasContent = containerRef.current.children.length > 0 || 
+                        containerRef.current.querySelector('iframe') ||
+                        containerRef.current.querySelector('form') ||
+                        containerRef.current.querySelector('input') ||
+                        containerRef.current.innerHTML.trim() !== '';
+      return hasContent;
+    };
     
     const resetAndRescan = async () => {
+      // Check if content is already loaded - if so, don't clear it!
+      if (checkIfContentLoaded()) {
+        hasLoaded = true;
+        return;
+      }
+      
       // Remove ALL Whop checkout elements from the page first (except our container)
       const allCheckouts = document.querySelectorAll('.whop-checkout-embed, [data-whop-checkout-plan-id], [id*="whop-checkout"]');
       allCheckouts.forEach(el => {
@@ -239,8 +269,8 @@ export function WhopCheckout({
         }
       });
       
-      // Clear our container completely
-      if (containerRef.current && mounted) {
+      // Only clear if content hasn't loaded yet
+      if (containerRef.current && mounted && !hasLoaded) {
         // Remove all children
         while (containerRef.current.firstChild) {
           containerRef.current.removeChild(containerRef.current.firstChild);
@@ -258,7 +288,7 @@ export function WhopCheckout({
       // Wait for cleanup
       await new Promise(resolve => setTimeout(resolve, 200));
       
-      if (!mounted || !containerRef.current) return;
+      if (!mounted || !containerRef.current || hasLoaded) return;
       
       // Re-setup container
       containerRef.current.className = 'whop-checkout-embed';
@@ -269,7 +299,7 @@ export function WhopCheckout({
       // Wait for modal animation and DOM to be ready
       await new Promise(resolve => setTimeout(resolve, 800));
       
-      if (!mounted || !containerRef.current) return;
+      if (!mounted || !containerRef.current || hasLoaded) return;
       
       // Ensure container is visible
       if (containerRef.current.offsetParent === null) {
@@ -277,7 +307,7 @@ export function WhopCheckout({
         await new Promise(resolve => setTimeout(resolve, 500));
       }
       
-      if (!mounted || !containerRef.current) return;
+      if (!mounted || !containerRef.current || hasLoaded) return;
       
       // Load script first if not already loaded
       try {
@@ -286,55 +316,68 @@ export function WhopCheckout({
         console.warn('Script load warning:', error);
       }
       
-      // Force multiple scans with increasing delays
-      if (window.whopCheckoutLoader?.scan) {
+      // Force multiple scans with increasing delays - but stop if content loads
+      if (window.whopCheckoutLoader?.scan && !hasLoaded) {
         // Scan immediately
         window.whopCheckoutLoader.scan();
         
-        // Retry scans at increasing intervals
+        // Retry scans at increasing intervals - but only if content hasn't loaded
         const scanDelays = [200, 400, 600, 1000, 1500, 2000, 3000];
         scanDelays.forEach(delay => {
-          setTimeout(() => {
-            if (mounted && window.whopCheckoutLoader?.scan && containerRef.current) {
-              // Check if content has loaded
-              const hasContent = containerRef.current.children.length > 0 || 
-                               containerRef.current.querySelector('iframe') ||
-                               containerRef.current.innerHTML.trim() !== '';
+          const timeout = setTimeout(() => {
+            if (!mounted || hasLoaded) return;
+            
+            if (window.whopCheckoutLoader?.scan && containerRef.current) {
+              // Check if content has loaded - if yes, stop all retries
+              if (checkIfContentLoaded()) {
+                hasLoaded = true;
+                clearAllTimeouts();
+                return;
+              }
               
-              if (!hasContent) {
+              // Only scan if content hasn't loaded
+              if (!hasLoaded) {
                 window.whopCheckoutLoader.scan();
               }
             }
           }, delay);
+          cleanupTimeouts.push(timeout);
         });
       }
       
-      // Final retry after longer delay if still no content
-      setTimeout(() => {
-        if (mounted && containerRef.current && window.whopCheckoutLoader?.scan) {
-          const hasContent = containerRef.current.children.length > 0 || 
-                           containerRef.current.querySelector('iframe') ||
-                           containerRef.current.innerHTML.trim() !== '';
+      // Final retry after longer delay if still no content - but check first!
+      const finalTimeout = setTimeout(() => {
+        if (!mounted || hasLoaded) return;
+        
+        if (containerRef.current && window.whopCheckoutLoader?.scan) {
+          // Check if content has loaded before clearing
+          if (checkIfContentLoaded()) {
+            hasLoaded = true;
+            clearAllTimeouts();
+            return;
+          }
           
-          if (!hasContent) {
+          // Only clear if content still hasn't loaded
+          if (!hasLoaded && containerRef.current) {
             console.log('Final retry: forcing checkout reload');
             // Last resort: clear and rescan
-            if (containerRef.current) {
-              containerRef.current.innerHTML = '';
-              containerRef.current.setAttribute('data-whop-checkout-plan-id', planId);
-              containerRef.current.setAttribute('data-whop-checkout-theme', theme);
-              containerRef.current.setAttribute('data-whop-checkout-theme-accent-color', accentColor);
-            }
+            containerRef.current.innerHTML = '';
+            containerRef.current.setAttribute('data-whop-checkout-plan-id', planId);
+            containerRef.current.setAttribute('data-whop-checkout-theme', theme);
+            containerRef.current.setAttribute('data-whop-checkout-theme-accent-color', accentColor);
             window.whopCheckoutLoader.scan();
           }
         }
       }, 4000);
+      cleanupTimeouts.push(finalTimeout);
     };
     
     resetAndRescan();
     
     return () => {
       mounted = false;
+      hasLoaded = false;
+      clearAllTimeouts();
     };
   }, [isVisible, planId, theme, accentColor, checkoutKey]);
 
