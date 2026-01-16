@@ -5,6 +5,7 @@ interface WhopCheckoutProps {
   theme?: 'light' | 'dark' | 'system';
   accentColor?: string;
   onComplete?: () => void;
+  isVisible?: boolean;
 }
 
 declare global {
@@ -101,12 +102,16 @@ export function WhopCheckout({
   planId = 'plan_6qlhHFelOu6cx',
   theme = 'system',
   accentColor = 'orange',
-  onComplete
+  onComplete,
+  isVisible = true
 }: WhopCheckoutProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const hasScannedRef = useRef(false);
 
   useEffect(() => {
+    // Don't initialize if not visible
+    if (!isVisible) return;
+    
     let mounted = true;
     let messageHandler: ((event: MessageEvent) => void) | null = null;
 
@@ -215,7 +220,34 @@ export function WhopCheckout({
       }
       hasScannedRef.current = false; // Reset so it can scan again when remounted
     };
-  }, [planId, theme, accentColor, onComplete]);
+  }, [planId, theme, accentColor, onComplete, isVisible]);
+
+  // When visibility changes, rescan
+  useEffect(() => {
+    if (isVisible && containerRef.current && window.whopCheckoutLoader?.scan) {
+      // Clear container first
+      if (containerRef.current) {
+        containerRef.current.innerHTML = '';
+        containerRef.current.className = 'whop-checkout-embed';
+        containerRef.current.setAttribute('data-whop-checkout-plan-id', planId);
+        containerRef.current.setAttribute('data-whop-checkout-theme', theme);
+        containerRef.current.setAttribute('data-whop-checkout-theme-accent-color', accentColor);
+      }
+      
+      // Wait a bit then scan
+      setTimeout(() => {
+        if (window.whopCheckoutLoader?.scan && containerRef.current) {
+          window.whopCheckoutLoader.scan();
+        }
+      }, 300);
+      
+      setTimeout(() => {
+        if (window.whopCheckoutLoader?.scan && containerRef.current) {
+          window.whopCheckoutLoader.scan();
+        }
+      }, 800);
+    }
+  }, [isVisible, planId, theme, accentColor]);
 
   const uniqueId = useRef(`whop-checkout-${Date.now()}-${Math.random()}`);
 
