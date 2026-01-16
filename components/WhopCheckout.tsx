@@ -231,7 +231,7 @@ export function WhopCheckout({
     };
   }, [planId, theme, accentColor, onComplete, isVisible]);
 
-  // When visibility changes, completely reset and rescan with aggressive retry
+  // When visibility changes, set up checkout and scan
   useEffect(() => {
     if (!isVisible || !containerRef.current) return;
     
@@ -246,133 +246,73 @@ export function WhopCheckout({
     
     const checkIfContentLoaded = (): boolean => {
       if (!containerRef.current) return false;
-      const hasContent = containerRef.current.children.length > 0 || 
-                        containerRef.current.querySelector('iframe') ||
-                        containerRef.current.querySelector('form') ||
-                        containerRef.current.querySelector('input') ||
-                        containerRef.current.innerHTML.trim() !== '';
-      return hasContent;
+      return containerRef.current.children.length > 0 || 
+             containerRef.current.querySelector('iframe') !== null ||
+             containerRef.current.querySelector('form') !== null ||
+             containerRef.current.querySelector('input') !== null;
     };
     
-    const resetAndRescan = async () => {
-      // Check if content is already loaded - if so, don't clear it!
-      if (checkIfContentLoaded()) {
-        hasLoaded = true;
-        return;
-      }
-      
-      // Remove ALL Whop checkout elements from the page first (except our container)
-      const allCheckouts = document.querySelectorAll('.whop-checkout-embed, [data-whop-checkout-plan-id], [id*="whop-checkout"]');
+    const setupAndScan = async () => {
+      // Remove OTHER checkout elements (not this one)
+      const allCheckouts = document.querySelectorAll('.whop-checkout-embed, [data-whop-checkout-plan-id]');
       allCheckouts.forEach(el => {
         if (el !== containerRef.current && el.parentNode) {
           el.parentNode.removeChild(el);
         }
       });
       
-      // Only clear if content hasn't loaded yet
-      if (containerRef.current && mounted && !hasLoaded) {
-        // Remove all children
-        while (containerRef.current.firstChild) {
-          containerRef.current.removeChild(containerRef.current.firstChild);
-        }
-        
-        // Remove all attributes except ref
-        const attrs = Array.from(containerRef.current.attributes);
-        attrs.forEach(attr => {
-          if (attr.name !== 'ref') {
-            containerRef.current?.removeAttribute(attr.name);
-          }
-        });
+      // Wait a bit for cleanup
+      await new Promise(resolve => setTimeout(resolve, 100));
+      
+      if (!mounted || !containerRef.current) return;
+      
+      // Set up container attributes
+      if (!containerRef.current.hasAttribute('data-whop-checkout-plan-id')) {
+        containerRef.current.className = 'whop-checkout-embed pointer-events-auto';
+        containerRef.current.setAttribute('data-whop-checkout-plan-id', planId);
+        containerRef.current.setAttribute('data-whop-checkout-theme', theme);
+        containerRef.current.setAttribute('data-whop-checkout-theme-accent-color', accentColor);
       }
       
-      // Wait for cleanup
-      await new Promise(resolve => setTimeout(resolve, 200));
+      // Wait for modal animation
+      await new Promise(resolve => setTimeout(resolve, 600));
       
-      if (!mounted || !containerRef.current || hasLoaded) return;
+      if (!mounted || !containerRef.current) return;
       
-      // Re-setup container
-      containerRef.current.className = 'whop-checkout-embed';
-      containerRef.current.setAttribute('data-whop-checkout-plan-id', planId);
-      containerRef.current.setAttribute('data-whop-checkout-theme', theme);
-      containerRef.current.setAttribute('data-whop-checkout-theme-accent-color', accentColor);
-      
-      // Wait for modal animation and DOM to be ready
-      await new Promise(resolve => setTimeout(resolve, 800));
-      
-      if (!mounted || !containerRef.current || hasLoaded) return;
-      
-      // Ensure container is visible
-      if (containerRef.current.offsetParent === null) {
-        // Container not visible yet, wait more
-        await new Promise(resolve => setTimeout(resolve, 500));
-      }
-      
-      if (!mounted || !containerRef.current || hasLoaded) return;
-      
-      // Load script first if not already loaded
+      // Load script if needed
       try {
         await loadWhopCheckoutScript();
       } catch (error) {
         console.warn('Script load warning:', error);
       }
       
-      // Force multiple scans with increasing delays - but stop if content loads
-      if (window.whopCheckoutLoader?.scan && !hasLoaded) {
-        // Scan immediately
+      // Initial scan
+      if (window.whopCheckoutLoader?.scan && mounted) {
         window.whopCheckoutLoader.scan();
         
-        // Retry scans at increasing intervals - but only if content hasn't loaded
-        const scanDelays = [200, 400, 600, 1000, 1500, 2000, 3000];
+        // Retry scans - but stop if content loads
+        const scanDelays = [300, 600, 1000, 1500];
         scanDelays.forEach(delay => {
           const timeout = setTimeout(() => {
-            if (!mounted || hasLoaded) return;
+            if (!mounted) return;
             
-            if (window.whopCheckoutLoader?.scan && containerRef.current) {
-              // Check if content has loaded - if yes, stop all retries
-              if (checkIfContentLoaded()) {
-                hasLoaded = true;
-                clearAllTimeouts();
-                return;
-              }
-              
-              // Only scan if content hasn't loaded
-              if (!hasLoaded) {
-                window.whopCheckoutLoader.scan();
-              }
+            // Check if content loaded - if yes, stop retrying
+            if (checkIfContentLoaded()) {
+              hasLoaded = true;
+              return;
+            }
+            
+            // Only scan if content hasn't loaded yet
+            if (window.whopCheckoutLoader?.scan && containerRef.current && !hasLoaded) {
+              window.whopCheckoutLoader.scan();
             }
           }, delay);
           cleanupTimeouts.push(timeout);
         });
       }
-      
-      // Final retry after longer delay if still no content - but check first!
-      const finalTimeout = setTimeout(() => {
-        if (!mounted || hasLoaded) return;
-        
-        if (containerRef.current && window.whopCheckoutLoader?.scan) {
-          // Check if content has loaded before clearing
-          if (checkIfContentLoaded()) {
-            hasLoaded = true;
-            clearAllTimeouts();
-            return;
-          }
-          
-          // Only clear if content still hasn't loaded
-          if (!hasLoaded && containerRef.current) {
-            console.log('Final retry: forcing checkout reload');
-            // Last resort: clear and rescan
-            containerRef.current.innerHTML = '';
-            containerRef.current.setAttribute('data-whop-checkout-plan-id', planId);
-            containerRef.current.setAttribute('data-whop-checkout-theme', theme);
-            containerRef.current.setAttribute('data-whop-checkout-theme-accent-color', accentColor);
-            window.whopCheckoutLoader.scan();
-          }
-        }
-      }, 4000);
-      cleanupTimeouts.push(finalTimeout);
     };
     
-    resetAndRescan();
+    setupAndScan();
     
     return () => {
       mounted = false;
