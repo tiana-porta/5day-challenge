@@ -35,6 +35,7 @@ export function RSVPButton() {
   const [count, setCount] = useState(0)
   const [justRSVPed, setJustRSVPed] = useState(false)
   const [showModal, setShowModal] = useState(false)
+  const [checkoutComplete, setCheckoutComplete] = useState(false)
   const [loading, setLoading] = useState(true)
   const [checkoutKey, setCheckoutKey] = useState(0)
 
@@ -68,12 +69,20 @@ export function RSVPButton() {
   }
   
   const handleCheckoutComplete = async () => {
-    // When checkout is completed, increment the count
+    // When checkout is completed, increment the count and show success
     const newCount = await incrementRSVP()
     setCount(newCount)
+    setCheckoutComplete(true)
     setJustRSVPed(true)
-    setTimeout(() => setJustRSVPed(false), 2000)
-    setShowModal(false)
+  }
+
+  const closeModal = () => {
+    // Only allow closing if checkout is complete
+    if (checkoutComplete) {
+      setShowModal(false)
+      setCheckoutComplete(false)
+      setCheckoutKey(prev => prev + 1) // Reset for next time
+    }
   }
 
   const closeModal = () => {
@@ -135,13 +144,14 @@ export function RSVPButton() {
       <AnimatePresence>
         {showModal && (
           <>
-            {/* Backdrop */}
+            {/* Backdrop - only clickable if checkout complete */}
             <motion.div
               className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              onClick={closeModal}
+              onClick={checkoutComplete ? closeModal : undefined}
+              style={{ pointerEvents: checkoutComplete ? 'auto' : 'none' }}
             />
             
             {/* Modal Content */}
@@ -159,51 +169,110 @@ export function RSVPButton() {
                 exit={{ scale: 0.9, y: 20 }}
                 onClick={(e) => e.stopPropagation()}
               >
-                {/* Close Button */}
-                <button
-                  onClick={closeModal}
-                  className="absolute top-4 right-4 text-primary/70 hover:text-primary transition-colors"
-                  aria-label="Close"
-                >
-                  <svg
-                    className="w-6 h-6"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
+                {/* Close Button - only show if checkout is complete */}
+                {checkoutComplete && (
+                  <button
+                    onClick={closeModal}
+                    className="absolute top-4 right-4 text-primary/70 hover:text-primary transition-colors"
+                    aria-label="Close"
                   >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M6 18L18 6M6 6l12 12"
-                    />
-                  </svg>
-                </button>
+                    <svg
+                      className="w-6 h-6"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M6 18L18 6M6 6l12 12"
+                      />
+                    </svg>
+                  </button>
+                )}
 
-                {/* Modal Header */}
-                <div className="text-center mb-6">
-                  <h2 className="text-3xl font-bold text-primary mb-2">
-                    Join the Waitlist
-                  </h2>
-                  <p className="text-primary/70">
-                    Secure your spot for the 5 Day Challenge
-                  </p>
-                </div>
+                {!checkoutComplete ? (
+                  <>
+                    {/* Modal Header */}
+                    <div className="text-center mb-6">
+                      <h2 className="text-3xl font-bold text-primary mb-2">
+                        Join the Waitlist
+                      </h2>
+                      <p className="text-primary/70">
+                        Secure your spot for the 5 Day Challenge
+                      </p>
+                    </div>
 
-                {/* Whop Checkout Embed */}
-                <div className="mt-6 min-h-[400px]">
-                  {showModal && (
-                    <WhopCheckout 
-                      key={`checkout-${checkoutKey}-${Date.now()}`}
-                      planId="plan_6qlhHFelOu6cx"
-                      theme="system"
-                      accentColor="orange"
-                      onComplete={handleCheckoutComplete}
-                      isVisible={true}
-                      checkoutKey={checkoutKey}
-                    />
-                  )}
-                </div>
+                    {/* Whop Checkout Embed */}
+                    <div className="mt-6 min-h-[400px]">
+                      {showModal && (
+                        <WhopCheckout 
+                          key={`checkout-${checkoutKey}-${Date.now()}`}
+                          planId="plan_6qlhHFelOu6cx"
+                          theme="system"
+                          accentColor="orange"
+                          onComplete={handleCheckoutComplete}
+                          isVisible={true}
+                          checkoutKey={checkoutKey}
+                        />
+                      )}
+                    </div>
+                  </>
+                ) : (
+                  /* Success Page */
+                  <div className="text-center py-12">
+                    <motion.div
+                      initial={{ scale: 0 }}
+                      animate={{ scale: 1 }}
+                      transition={{ type: 'spring', stiffness: 200 }}
+                      className="mb-6"
+                    >
+                      <div className="w-24 h-24 mx-auto bg-accent/20 rounded-full flex items-center justify-center mb-6">
+                        <svg
+                          className="w-12 h-12 text-accent"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={3}
+                            d="M5 13l4 4L19 7"
+                          />
+                        </svg>
+                      </div>
+                    </motion.div>
+                    <motion.h2
+                      className="text-4xl font-bold text-primary mb-4"
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: 0.2 }}
+                    >
+                      You're In! 🎉
+                    </motion.h2>
+                    <motion.p
+                      className="text-xl text-primary/70 mb-8"
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: 0.3 }}
+                    >
+                      Welcome to the 5 Day Challenge. Get ready to build something amazing!
+                    </motion.p>
+                    <motion.button
+                      onClick={closeModal}
+                      className="px-8 py-4 rounded-xl font-bold text-lg bg-accent text-white hover:bg-accent/90 shadow-lg shadow-accent/50 transition-all duration-300"
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: 0.4 }}
+                      whileHover={{ scale: 1.05 }}
+                      whileTap={{ scale: 0.98 }}
+                    >
+                      Continue
+                    </motion.button>
+                  </div>
+                )}
               </motion.div>
             </motion.div>
           </>
