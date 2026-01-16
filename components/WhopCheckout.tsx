@@ -202,7 +202,7 @@ export function WhopCheckout({
     initializeCheckout();
 
     // Re-scan if loader becomes available later or if element wasn't found
-    // BUT only if content hasn't loaded yet
+    // BUT only if content hasn't loaded yet - and stop immediately once it loads
     const retryInterval = setInterval(() => {
       if (!mounted || !containerRef.current || !window.whopCheckoutLoader?.scan) return;
       
@@ -210,14 +210,19 @@ export function WhopCheckout({
       const hasContent = containerRef.current.children.length > 0 || 
                         containerRef.current.querySelector('iframe') ||
                         containerRef.current.querySelector('form') ||
-                        containerRef.current.querySelector('input');
+                        containerRef.current.querySelector('input') ||
+                        containerRef.current.querySelector('button');
       
-      // Only scan if content hasn't loaded - never clear if it has!
+      // If content loaded, stop ALL retries immediately
+      if (hasContent) {
+        clearInterval(retryInterval);
+        hasScannedRef.current = true; // Mark as loaded
+        return;
+      }
+      
+      // Only scan if content hasn't loaded
       if (!hasContent) {
         window.whopCheckoutLoader.scan();
-      } else {
-        // Content loaded, stop retrying
-        clearInterval(retryInterval);
       }
     }, 500);
 
@@ -249,7 +254,8 @@ export function WhopCheckout({
       return containerRef.current.children.length > 0 || 
              containerRef.current.querySelector('iframe') !== null ||
              containerRef.current.querySelector('form') !== null ||
-             containerRef.current.querySelector('input') !== null;
+             containerRef.current.querySelector('input') !== null ||
+             containerRef.current.querySelector('button') !== null;
     };
     
     const setupAndScan = async () => {
@@ -290,15 +296,19 @@ export function WhopCheckout({
       if (window.whopCheckoutLoader?.scan && mounted) {
         window.whopCheckoutLoader.scan();
         
-        // Retry scans - but stop if content loads
-        const scanDelays = [300, 600, 1000, 1500];
+        // Retry scans - but stop immediately if content loads
+        const scanDelays = [300, 600, 1000];
         scanDelays.forEach(delay => {
           const timeout = setTimeout(() => {
-            if (!mounted) return;
+            if (!mounted || hasLoaded) {
+              clearAllTimeouts();
+              return;
+            }
             
-            // Check if content loaded - if yes, stop retrying
+            // Check if content loaded - if yes, stop ALL retries immediately
             if (checkIfContentLoaded()) {
               hasLoaded = true;
+              clearAllTimeouts();
               return;
             }
             
