@@ -77,7 +77,7 @@ export function SubmissionSuccess({ dayNumber, onBackToChallenge }: SubmissionSu
           </button>
         )}
         <a
-          href="https://whop.com/whopu"
+          href="https://whop.com/joined/whop/5-day-challenge-chat-KwjSkTomNJzhtF/app/"
           target="_blank"
           rel="noopener noreferrer"
           className="px-6 py-3 rounded-xl font-semibold bg-accent text-white hover:bg-accent/90 shadow-lg shadow-accent/30 transition-all duration-300"
