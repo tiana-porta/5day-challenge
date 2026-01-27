@@ -16,7 +16,7 @@ interface WorksheetSubmission {
 }
 
 // Google Apps Script Web App URL
-const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzN58ZlASkKwjPNsTKyUU0TSfLIQOcb6BprOBHqUJVwbS6osiv67CWyrHINmIjv-edhjQ/exec";
+const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwtfcQ3XPpMq_yU8pDOkfu_yEzbD5ZBNcSET2N7aFwQCB7U8letQsKY0Y4BempwBtvHYQ/exec";
 
 export async function appendWorksheetSubmission(data: WorksheetSubmission): Promise<void> {
   // Format worksheet data as a readable string for the sheet
