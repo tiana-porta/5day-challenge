@@ -75,19 +75,20 @@ export function OnePageDocForm({ dayNumber }: OnePageDocFormProps) {
   if (isSubmitted) {
     return (
       <SubmissionSuccess
-        title="Homework Submitted!"
-        message="Your one-page doc has been submitted. Keep up the momentum!"
         dayNumber={dayNumber}
       />
     )
   }
 
   return (
-    <HomeworkCard
-      title="Day 3: The Offer"
-      subtitle="Submit your one-page doc"
-      dayNumber={dayNumber}
-    >
+    <HomeworkCard>
+      <div className="text-center mb-8">
+        <div className="inline-block px-3 py-1 rounded-full bg-accent/20 text-accent text-sm font-semibold mb-4">
+          Day {dayNumber}
+        </div>
+        <h2 className="text-2xl md:text-3xl font-bold text-primary mb-2">The Offer</h2>
+        <p className="text-primary/60">Submit your one-page doc</p>
+      </div>
       <form onSubmit={handleSubmit} className="space-y-6">
         {/* Username */}
         <div>
