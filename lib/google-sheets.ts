@@ -15,8 +15,9 @@ interface WorksheetSubmission {
   status: string;
 }
 
-// Google Apps Script Web App URL
+// Google Apps Script Web App URLs
 const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwtfcQ3XPpMq_yU8pDOkfu_yEzbD5ZBNcSET2N7aFwQCB7U8letQsKY0Y4BempwBtvHYQ/exec";
+const GOOGLE_SCRIPT_URL_DAY4 = "https://script.google.com/macros/s/AKfycbxGkGlt5E29QgYNwdwwoVTvZ71mM934E32FXmCpKNMOBK8yXx0zZg4jvSxLRxWAHh8o/exec";
 
 export async function appendWorksheetSubmission(data: WorksheetSubmission): Promise<void> {
   // Format worksheet data as a readable string for the sheet
@@ -187,6 +188,62 @@ export async function appendDay3Submission(data: Day3Submission): Promise<void> 
     console.log(`Username: ${data.username}`);
     console.log(`Email: ${data.email}`);
     console.log(`Doc Link: ${data.docLink}`);
+    console.log(`Notes: ${data.notes}`);
+    console.log("-------------------------------------------");
+  }
+}
+
+// Day 4 submission interface
+interface Day4Submission {
+  timestamp: string;
+  submissionId: string;
+  dayNumber: number;
+  username: string;
+  email: string;
+  storeLink: string;
+  notes: string;
+  status: string;
+}
+
+export async function appendDay4Submission(data: Day4Submission): Promise<void> {
+  const payload = {
+    type: "day4",
+    timestamp: data.timestamp,
+    submissionId: data.submissionId,
+    dayNumber: data.dayNumber,
+    username: data.username,
+    email: data.email,
+    storeLink: data.storeLink,
+    notes: data.notes,
+    status: data.status,
+  };
+
+  console.log("📊 Sending Day 4 submission to Google Sheets...");
+
+  try {
+    const response = await fetch(GOOGLE_SCRIPT_URL_DAY4, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(payload),
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP error: ${response.status}`);
+    }
+
+    console.log("✅ Successfully sent Day 4 submission to Google Sheet");
+  } catch (error) {
+    console.error("❌ Error sending to Google Sheets:", error);
+    console.log("📊 Logging Day 4 submission locally as fallback:");
+    console.log("-------------------------------------------");
+    console.log(`Timestamp: ${data.timestamp}`);
+    console.log(`Submission ID: ${data.submissionId}`);
+    console.log(`Day: ${data.dayNumber}`);
+    console.log(`Username: ${data.username}`);
+    console.log(`Email: ${data.email}`);
+    console.log(`Store Link: ${data.storeLink}`);
     console.log(`Notes: ${data.notes}`);
     console.log("-------------------------------------------");
   }
