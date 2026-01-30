@@ -38,14 +38,14 @@ export default function Home() {
           transition={{ duration: 0.8 }}
         >
           <div className="inline-block px-4 py-2 rounded-full bg-accent/20 text-accent text-sm font-semibold mb-6">
-            Day 4 of 5
+            Day 5 of 5
           </div>
           <h1 className="text-5xl md:text-7xl font-black text-primary mb-6 tracking-tight">
             <span className="block">Whop University:</span>
-            <span className="block text-accent mt-2">Build Your Store</span>
+            <span className="block text-accent mt-2">Profile Funnel</span>
           </h1>
           <p className="text-xl md:text-2xl text-primary/70 font-light max-w-xl mx-auto">
-            Complete your Day 4 homework to move forward in the challenge.
+            Complete your Day 5 homework to finish the challenge!
           </p>
         </motion.div>
 
@@ -55,7 +55,7 @@ export default function Home() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.8, delay: 0.2 }}
         >
-          <Link href="/experiences/day4/homework/day-4">
+          <Link href="/experiences/day5/homework/day-5">
             <motion.button
               className="relative px-12 py-5 rounded-xl font-bold text-lg md:text-xl bg-accent text-white hover:bg-accent/90 shadow-lg shadow-accent/50 transition-all duration-300 overflow-hidden group"
               whileHover={{ scale: 1.05, boxShadow: '0 0 40px rgba(250, 70, 22, 0.6)' }}

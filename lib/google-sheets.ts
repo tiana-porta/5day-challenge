@@ -248,3 +248,59 @@ export async function appendDay4Submission(data: Day4Submission): Promise<void> 
     console.log("-------------------------------------------");
   }
 }
+
+// Day 5 submission interface
+interface Day5Submission {
+  timestamp: string;
+  submissionId: string;
+  dayNumber: number;
+  username: string;
+  email: string;
+  profileLink: string;
+  notes: string;
+  status: string;
+}
+
+export async function appendDay5Submission(data: Day5Submission): Promise<void> {
+  const payload = {
+    type: "day5",
+    timestamp: data.timestamp,
+    submissionId: data.submissionId,
+    dayNumber: data.dayNumber,
+    username: data.username,
+    email: data.email,
+    profileLink: data.profileLink,
+    notes: data.notes,
+    status: data.status,
+  };
+
+  console.log("📊 Sending Day 5 submission to Google Sheets...");
+
+  try {
+    const response = await fetch(GOOGLE_SCRIPT_URL_DAY4, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(payload),
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP error: ${response.status}`);
+    }
+
+    console.log("✅ Successfully sent Day 5 submission to Google Sheet");
+  } catch (error) {
+    console.error("❌ Error sending to Google Sheets:", error);
+    console.log("📊 Logging Day 5 submission locally as fallback:");
+    console.log("-------------------------------------------");
+    console.log(`Timestamp: ${data.timestamp}`);
+    console.log(`Submission ID: ${data.submissionId}`);
+    console.log(`Day: ${data.dayNumber}`);
+    console.log(`Username: ${data.username}`);
+    console.log(`Email: ${data.email}`);
+    console.log(`Profile Link: ${data.profileLink}`);
+    console.log(`Notes: ${data.notes}`);
+    console.log("-------------------------------------------");
+  }
+}
